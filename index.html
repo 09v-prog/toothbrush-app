@@ -163,8 +163,8 @@
         </div>
 
         <!-- SOUND: Two tabs -->
-        <div class="sound-section">
-            <div class="sound-tabs">
+        <div class="sound-section" id="soundSection">
+            <div class="sound-tabs sel-ui">
                 <button class="sound-tab active" onclick="switchTab('yt')">🎬 Відео</button>
                 <button class="sound-tab" onclick="switchTab('music')">🎵 Мелодії</button>
             </div>
@@ -179,20 +179,27 @@
                     <video id="mp4Player" style="display:none" playsinline></video>
                     <iframe id="youtubePlayer" style="display:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                 </div>
-                <div id="videoSource" style="font-size:10px;color:var(--text-light);text-align:center;padding:4px 10px 0;">🎵 Bongo Cat — вбудоване відео</div>
-                <div class="url-input-group">
+                <div id="videoSource" class="sel-ui" style="font-size:10px;color:var(--text-light);text-align:center;padding:4px 10px 0;">🎵 Bongo Cat — вбудоване відео</div>
+
+                <!-- Video Playlist Selector -->
+                <div class="sel-ui" style="padding:8px 10px;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;">
+                    <div style="font-size:10px;color:var(--text-light);margin-bottom:6px;">🎬 Вбудовані відео:</div>
+                    <div id="videoPlaylist" style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;"></div>
+                </div>
+
+                <div class="url-input-group sel-ui">
                     <input type="text" id="customUrl" placeholder="Своє посилання YouTube (замінить відео)...">
                     <button onclick="setCustomVideo()">OK</button>
                 </div>
-                <div id="resetVideoBtn" style="display:none;text-align:center;padding:0 10px 6px;">
+                <div id="resetVideoBtn" class="sel-ui" style="display:none;text-align:center;padding:0 10px 6px;">
                     <button onclick="resetToDefaultVideo()" style="background:none;border:1px solid var(--danger);color:var(--danger);padding:4px 12px;border-radius:8px;font-size:10px;cursor:pointer;">↩ Повернути вбудоване відео</button>
                 </div>
-                <div class="yt-note">💡 За замовченням грає вбудоване відео без реклами</div>
+                <div class="yt-note sel-ui">💡 За замовченням грає вбудоване відео без реклами</div>
             </div>
 
             <!-- Music tab -->
             <div class="tab-content" id="tab-music">
-                <div class="music-list" id="musicList"></div>
+                <div class="music-list sel-ui" id="musicList"></div>
                 <div class="vol-row"><span>🔈</span><input type="range" id="vol" min="0" max="100" value="70" oninput="setVol(this.value)"><span>🔊</span></div>
             </div>
         </div>
@@ -270,7 +277,16 @@ resume(){if(this.ctx?.state==='suspended')this.ctx.resume();}
 // ===== CONFIG =====
 const CIRCLE_LENGTH = 2 * Math.PI * 70; // 439.82
 const DEFAULT_VIDEO_ID = 'M6MMTW-FW00';
-const DEFAULT_MP4_URL = 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20CHANEL%20(Cover%20Version)%20%F0%9F%8E%A7-1280x720-avc1-mp4a.mp4';
+const VIDEOS = [
+    { name: 'CHANEL', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20CHANEL%20(Cover%20Version)%20%F0%9F%8E%A7-1280x720-avc1-mp4a.mp4' },
+    { name: 'Sweet but Psycho', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20Sweet%20but%20Psycho.mp4' },
+    { name: 'Boys', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20Boys.mp4' },
+    { name: 'Party Rock Anthem', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20Party%20Rock%20Anthem.mp4' },
+    { name: 'Big Guy', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20Big%20Guy.mp4' },
+    { name: 'UA Song 🎵', url: 'https://09v-prog.github.io/toothbrush-app/UA_song.mp4' }
+];
+const DEFAULT_MP4_URL = VIDEOS[0].url;
+let screenWakeLock = null;
 
 // ===== STATE =====
 let state = {
@@ -283,6 +299,7 @@ let state = {
     activeTab: 'yt',
     selectedMelody: 'happy',
     customVideoId: null,
+    selectedVideoIndex: 0,  // Індекс з VIDEOS array
     currentMonth: new Date().getMonth(),
     currentYear: new Date().getFullYear(),
     brushLog: {},
@@ -310,6 +327,7 @@ function init() {
     setSess(hour >= 16 || hour < 4 ? 'evening' : 'morning');
     updateGreeting();
     renderMusicList();
+    renderVideoPlaylist();
     renderCalendar();
     renderAchievements();
     updateStats();
@@ -336,6 +354,7 @@ function loadState() {
             state.timerDuration = p.timerDuration || 120;
             state.activeTab = p.activeTab || 'yt';
             state.customVideoId = p.customVideoId || null;
+            state.selectedVideoIndex = p.selectedVideoIndex || 0;
             state.timeLeft = state.timerDuration;
         }
         calculateStreak();
@@ -347,7 +366,7 @@ function saveState() {
             brushLog: state.brushLog, totalBrushes: state.totalBrushes,
             achievements: state.achievements, selectedMelody: state.selectedMelody,
             timerDuration: state.timerDuration, activeTab: state.activeTab,
-            customVideoId: state.customVideoId,
+            customVideoId: state.customVideoId, selectedVideoIndex: state.selectedVideoIndex,
         }));
     } catch (e) {}
 }
@@ -431,9 +450,10 @@ function playVideo() {
         yt.src = `https://www.youtube.com/embed/${state.customVideoId}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1&start=0`;
         yt.style.display = 'block';
     } else {
-        // Default — play MP4 from repo
+        // Play selected MP4 from playlist
         yt.style.display = 'none';
-        mp4.src = DEFAULT_MP4_URL;
+        const selectedUrl = VIDEOS[state.selectedVideoIndex].url;
+        mp4.src = selectedUrl;
         mp4.loop = true;
         mp4.style.display = 'block';
         mp4.play().catch(() => {});
@@ -469,6 +489,29 @@ function updateVideoSourceLabel() {
     }
 }
 
+function renderVideoPlaylist() {
+    const container = document.getElementById('videoPlaylist');
+    container.innerHTML = VIDEOS.map((v, i) => `
+        <button class="video-btn ${i === state.selectedVideoIndex ? 'sel' : ''}"
+                onclick="selectVideo(${i})"
+                style="padding:6px;font-size:10px;border:1px solid #e0e0e0;border-radius:6px;
+                        ${i === state.selectedVideoIndex ? 'background:var(--primary);color:white;border-color:var(--primary);' : 'background:var(--white);color:var(--text);'}
+                        cursor:pointer;">
+            🎵 ${v.name}
+        </button>
+    `).join('');
+}
+
+function selectVideo(index) {
+    state.selectedVideoIndex = index;
+    saveState();
+    renderVideoPlaylist();
+    // Якщо таймер не запущено, покази превʼю
+    if (!state.timerRunning) {
+        console.log('Обрано відео:', VIDEOS[index].name);
+    }
+}
+
 // ===== MUSIC =====
 function renderMusicList() {
     document.getElementById('musicList').innerHTML = Object.entries(Aud.M).map(([k, m]) => `
@@ -480,6 +523,23 @@ function renderMusicList() {
 function selectMelody(k) { state.selectedMelody = k; saveState(); renderMusicList(); }
 function setVol(v) { Aud.setV(v / 100); }
 
+// ===== SCREEN WAKE LOCK =====
+async function requestScreenWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+        screenWakeLock = await navigator.wakeLock.request('screen');
+        logger.info('✅ Екран не гатиме під час таймера');
+    } catch (err) {
+        console.log('Screen wake lock помилка:', err);
+    }
+}
+function releaseScreenWakeLock() {
+    if (screenWakeLock) {
+        screenWakeLock.release();
+        screenWakeLock = null;
+    }
+}
+
 // ===== TIMER =====
 function startTimer() {
     state.timerRunning = true;
@@ -488,7 +548,12 @@ function startTimer() {
 
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('dRow').style.display = 'none';
+    // Приховай тільки UI вибору, залиш відео/гучність видимими
+    document.querySelectorAll('.sel-ui').forEach(el => el.style.display = 'none');
     document.getElementById('ctrls').classList.add('vis');
+
+    // Утримувати екран увімкненим
+    requestScreenWakeLock();
 
     // Start sound based on active tab
     if (state.activeTab === 'yt') playVideo();
@@ -548,13 +613,15 @@ function timerComplete() {
         window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
 }
 
-function stopAll() { stopVideo(); Aud.stop(); }
+function stopAll() { stopVideo(); Aud.stop(); releaseScreenWakeLock(); }
 
 function resetUI() {
     state.timeLeft = state.timerDuration;
     state.timerPaused = false;
     document.getElementById('startBtn').style.display = 'block';
     document.getElementById('dRow').style.display = 'flex';
+    // Покажи UI вибору назад
+    document.querySelectorAll('.sel-ui').forEach(el => el.style.display = '');
     document.getElementById('ctrls').classList.remove('vis');
     document.getElementById('pauseBtn').textContent = '⏸ Пауза';
     updateTimerDisplay();
@@ -595,7 +662,13 @@ function logBrush() {
     saveState();
     updateStats();
 }
-function getDateKey(d) { return d.toISOString().split('T')[0]; }
+function getDateKey(d) {
+    // Використовуй локальну дату, не UTC
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 function calculateStreak() {
     let streak = 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
