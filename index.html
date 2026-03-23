@@ -277,6 +277,7 @@ resume(){if(this.ctx?.state==='suspended')this.ctx.resume();}
 // ===== CONFIG =====
 const CIRCLE_LENGTH = 2 * Math.PI * 70; // 439.82
 const DEFAULT_VIDEO_ID = 'M6MMTW-FW00';
+const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbzUJBWUl6fehSGBSxi32xfdYrdaZIsCcaGIIorGka7FA7mwaDdUOy73LFCBSQtk_4Ej/exec';
 const VIDEOS = [
     { name: 'CHANEL', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20CHANEL%20(Cover%20Version)%20%F0%9F%8E%A7-1280x720-avc1-mp4a.mp4' },
     { name: 'Sweet but Psycho', url: 'https://09v-prog.github.io/toothbrush-app/Bongo%20Cat%20-%20Sweet%20but%20Psycho.mp4' },
@@ -665,6 +666,44 @@ function logBrush() {
     checkAchievements();
     saveState();
     updateStats();
+    sendAnalytics(true);  // Надіслати в Google Sheets
+}
+
+// ===== ANALYTICS → Google Sheets =====
+function sendAnalytics(completed) {
+    const videoName = state.customVideoId
+        ? 'YouTube: ' + state.customVideoId
+        : VIDEOS[state.selectedVideoIndex].name;
+    const melodyNames = {
+        happy: 'Веселі зубки', lullaby: 'Колискова', march: 'Зубний марш',
+        ocean: 'Океан', circus: 'Цирк', silent: 'Без музики'
+    };
+
+    // Дані Telegram акаунта
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
+
+    const data = {
+        userId: tgUser.id || '',
+        username: tgUser.username ? '@' + tgUser.username : '',
+        firstName: tgUser.first_name || '',
+        lastName: tgUser.last_name || '',
+        session: state.currentSession === 'morning' ? 'Ранок' : 'Вечір',
+        duration: state.timerDuration,
+        completed: completed,
+        soundType: state.activeTab === 'yt' ? 'Відео' : 'Мелодія',
+        videoUsed: state.activeTab === 'yt' ? videoName : '',
+        melodyUsed: state.activeTab === 'music' ? (melodyNames[state.selectedMelody] || state.selectedMelody) : '',
+        totalBrushes: state.totalBrushes,
+        streak: state.streak,
+        achievements: Object.keys(state.achievements).filter(k => state.achievements[k]?.unlocked)
+    };
+
+    fetch(ANALYTICS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).catch(() => {});
 }
 function getDateKey(d) {
     // Використовуй локальну дату, не UTC
