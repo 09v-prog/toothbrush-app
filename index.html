@@ -73,11 +73,11 @@
         .url-input-group button{padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--white);cursor:pointer;font-size:12px;font-weight:600;}
         .yt-note{font-size:9px;color:var(--text-light);padding:0 10px 8px;text-align:center;}
 
-        /* MUSIC LIST */
-        .music-list{padding:8px;display:flex;flex-direction:column;gap:4px;}
-        .m-item{display:flex;align-items:center;gap:8px;padding:8px;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent;}
+        /* MUSIC LIST — 2 columns */
+        .music-list{padding:8px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;}
+        .m-item{display:flex;align-items:center;gap:5px;padding:6px;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent;}
         .m-item.sel{border-color:var(--primary);background:rgba(108,92,231,0.05);}
-        .m-item .me{font-size:20px;}.m-item .mn{font-weight:600;font-size:11px;}.m-item .md{font-size:9px;color:var(--text-light);}
+        .m-item .me{font-size:16px;}.m-item .mn{font-weight:600;font-size:10px;}.m-item .md{font-size:8px;color:var(--text-light);}
         .vol-row{display:flex;align-items:center;gap:5px;padding:4px 10px 8px;font-size:13px;}
         .vol-row input{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:#e0e0e0;border-radius:2px;outline:none;}
         .vol-row input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);cursor:pointer;}
