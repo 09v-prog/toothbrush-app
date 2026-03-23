@@ -171,7 +171,7 @@
 
             <!-- YouTube tab — SAME iframe approach as original -->
             <div class="tab-content active" id="tab-yt">
-                <div class="video-wrapper">
+                <div class="video-wrapper" id="videoWrapper" style="display:none;">
                     <div class="video-placeholder" id="videoPlaceholder">
                         <span class="vicon">▶️</span>
                         <span style="font-size:12px">Натисни «Почати» щоб запустити</span>
@@ -548,7 +548,9 @@ function startTimer() {
 
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('dRow').style.display = 'none';
-    // Приховай тільки UI вибору, залиш відео/гучність видимими
+    // Покажи екран відео
+    document.getElementById('videoWrapper').style.display = 'block';
+    // Приховай тільки UI вибору
     document.querySelectorAll('.sel-ui').forEach(el => el.style.display = 'none');
     document.getElementById('ctrls').classList.add('vis');
 
@@ -620,6 +622,8 @@ function resetUI() {
     state.timerPaused = false;
     document.getElementById('startBtn').style.display = 'block';
     document.getElementById('dRow').style.display = 'flex';
+    // Приховай екран відео
+    document.getElementById('videoWrapper').style.display = 'none';
     // Покажи UI вибору назад
     document.querySelectorAll('.sel-ui').forEach(el => el.style.display = '');
     document.getElementById('ctrls').classList.remove('vis');
